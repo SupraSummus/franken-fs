@@ -1,0 +1,60 @@
+#!/usr/bin/env pgspawn
+nodes:
+
+# - command: [nc, localhost, 7448]
+#   inputs:
+#     0: to_server_encrypted
+#   outputs:
+#     1: from_server_encrypted
+
+ - command: [
+     openssl, s_client,
+     -connect, 'localhost:7448',
+     -cert, client_cert.pem,
+     -key, client_key.pem,
+     -quiet,
+   ]
+   inputs:
+     0: to_server
+   outputs:
+     1: from_server
+
+# DEBUG
+# - command: [cat]
+#   inputs: {0: from_server}
+#   outputs: {1: to_server}
+
+ - command: [socat, -, 'FD:3']
+   inputs:
+     0: from_server
+   outputs:
+     1: to_server
+   sockets:
+     3: server
+
+ - command:
+    - bash
+    - -c
+    - |
+      set -e
+      DEV=/dev/nbd0
+      SIZE=134217728
+      MOUNTDIR=$(pwd)/mnt
+      # exit hook
+      function cleanup () {
+        umount -v "$MOUNTDIR"
+        if [ $? -eq 0 ]; then
+          kill $PBLOCKBD_PID
+        fi
+      }
+      trap cleanup SIGINT SIGTERM EXIT
+      # run buse in background
+      pblock-bd 3 "$SIZE" "$DEV" >/dev/null 2>/dev/null &
+      PBLOCKBD_PID=$!
+      # mount
+      mount "$DEV" "$MOUNTDIR"
+      echo "block device $DEV mounted at $MOUNTDIR"
+      # wait for pblock-bd
+      wait $PBLOCKBD_PID
+   sockets:
+     3: server

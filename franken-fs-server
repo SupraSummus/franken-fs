@@ -1,0 +1,35 @@
+#!/usr/bin/env pgspawn
+nodes:
+
+# - command: [nc, -l, -p7448, -c]
+#   inputs:
+#     0: to_client_encrypted
+#   outputs:
+#     1: from_client_encrypted
+
+ - command: [
+     openssl, s_server,
+     -port, 7448,
+     -naccept, 1,
+     -cert, server_cert.pem,
+     -key, server_key.pem,
+     -Verify, 0,
+     -quiet,
+   ]
+   inputs:
+     0: to_client
+   outputs:
+     1: from_client
+
+# DEBUG
+# - command: [cat]
+#   inputs:
+#     0: from_client
+#   outputs:
+#     1: to_client
+
+ - command: [pblock-srv, -r0, -w1, ./disk_file]
+   inputs:
+     0: from_client
+   outputs:
+     1: to_client
