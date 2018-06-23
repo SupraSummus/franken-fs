@@ -12,7 +12,9 @@ nodes:
      -connect, 'localhost:7448',
      -cert, client_cert.pem,
      -key, client_key.pem,
+     -verify, 1,
      -quiet,
+     -no_ign_eof,
    ]
    inputs:
      0: to_server
@@ -32,29 +34,9 @@ nodes:
    sockets:
      3: server
 
- - command:
-    - bash
-    - -c
-    - |
-      set -e
-      DEV=/dev/nbd0
-      SIZE=134217728
-      MOUNTDIR=$(pwd)/mnt
-      # exit hook
-      function cleanup () {
-        umount -v "$MOUNTDIR"
-        if [ $? -eq 0 ]; then
-          kill $PBLOCKBD_PID
-        fi
-      }
-      trap cleanup SIGINT SIGTERM EXIT
-      # run buse in background
-      pblock-bd 3 "$SIZE" "$DEV" >/dev/null 2>/dev/null &
-      PBLOCKBD_PID=$!
-      # mount
-      mount "$DEV" "$MOUNTDIR"
-      echo "block device $DEV mounted at $MOUNTDIR"
-      # wait for pblock-bd
-      wait $PBLOCKBD_PID
+ - command: [
+     sudo, -C, 100,
+     pblock-bd, 3, 134217728, /dev/nbd0,
+   ]
    sockets:
      3: server

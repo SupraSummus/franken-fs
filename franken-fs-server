@@ -13,8 +13,9 @@ nodes:
      -naccept, 1,
      -cert, server_cert.pem,
      -key, server_key.pem,
-     -Verify, 0,
+     -verify, 1,
      -quiet,
+     -no_ign_eof,
    ]
    inputs:
      0: to_client
